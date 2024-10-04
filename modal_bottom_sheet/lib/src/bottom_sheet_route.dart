@@ -15,6 +15,7 @@ class _ModalBottomSheet<T> extends StatefulWidget {
     this.bounce = false,
     this.expanded = false,
     this.enableDrag = true,
+    this.needCloseResistance = false,
     this.animationCurve,
   });
 
@@ -22,6 +23,7 @@ class _ModalBottomSheet<T> extends StatefulWidget {
   final ModalSheetRoute<T> route;
   final bool expanded;
   final bool bounce;
+  final bool needCloseResistance;
   final bool enableDrag;
   final AnimationController? secondAnimationController;
   final Curve? animationCurve;
@@ -75,8 +77,7 @@ class _ModalBottomSheetState<T> extends State<_ModalBottomSheet<T>> {
   Widget build(BuildContext context) {
     assert(debugCheckHasMediaQuery(context));
     assert(widget.route._animationController != null);
-    final scrollController = PrimaryScrollController.maybeOf(context) ??
-        (_scrollController ??= ScrollController());
+    final scrollController = PrimaryScrollController.maybeOf(context) ?? (_scrollController ??= ScrollController());
     return ModalScrollController(
       controller: scrollController,
       child: Builder(
@@ -95,6 +96,7 @@ class _ModalBottomSheetState<T> extends State<_ModalBottomSheet<T>> {
                 closeProgressThreshold: widget.closeProgressThreshold,
                 expanded: widget.route.expanded,
                 containerBuilder: widget.route.containerBuilder,
+                needCloseResistance: widget.needCloseResistance,
                 animationController: widget.route._animationController!,
                 shouldClose: widget.route._hasScopedWillPopCallback
                     ? () async {
@@ -131,6 +133,7 @@ class ModalSheetRoute<T> extends PageRoute<T> {
     this.barrierLabel,
     this.secondAnimationController,
     this.modalBarrierColor,
+    this.needCloseResistance = false,
     this.isDismissible = true,
     this.enableDrag = true,
     required this.expanded,
@@ -138,7 +141,7 @@ class ModalSheetRoute<T> extends PageRoute<T> {
     this.animationCurve,
     Duration? duration,
     super.settings,
-  })  : duration = duration ?? _bottomSheetDuration;
+  }) : duration = duration ?? _bottomSheetDuration;
 
   final double? closeProgressThreshold;
   final WidgetWithChildBuilder? containerBuilder;
@@ -147,6 +150,7 @@ class ModalSheetRoute<T> extends PageRoute<T> {
   final bool bounce;
   final Color? modalBarrierColor;
   final bool isDismissible;
+  final bool needCloseResistance;
   final bool enableDrag;
   final ScrollController? scrollController;
 
@@ -189,8 +193,7 @@ class ModalSheetRoute<T> extends PageRoute<T> {
   bool get _hasScopedWillPopCallback => hasScopedWillPopCallback;
 
   @override
-  Widget buildPage(BuildContext context, Animation<double> animation,
-      Animation<double> secondaryAnimation) {
+  Widget buildPage(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) {
     // By definition, the bottom sheet is aligned to the bottom of the page
     // and isn't exposed to the top padding of the MediaQuery.
     Widget bottomSheet = MediaQuery.removePadding(
@@ -199,6 +202,7 @@ class ModalSheetRoute<T> extends PageRoute<T> {
       child: _ModalBottomSheet<T>(
         closeProgressThreshold: closeProgressThreshold,
         route: this,
+        needCloseResistance: needCloseResistance,
         secondAnimationController: secondAnimationController,
         expanded: expanded,
         bounce: bounce,
@@ -210,8 +214,7 @@ class ModalSheetRoute<T> extends PageRoute<T> {
   }
 
   @override
-  bool canTransitionTo(TransitionRoute<dynamic> nextRoute) =>
-      nextRoute is ModalSheetRoute;
+  bool canTransitionTo(TransitionRoute<dynamic> nextRoute) => nextRoute is ModalSheetRoute;
 
   @override
   bool canTransitionFrom(TransitionRoute<dynamic> previousRoute) =>
@@ -236,6 +239,7 @@ Future<T?> showCustomModalBottomSheet<T>({
   ShapeBorder? shape,
   Clip? clipBehavior,
   Color? barrierColor,
+  bool needCloseResistance = false,
   bool bounce = false,
   bool expand = false,
   AnimationController? secondAnimation,
@@ -249,20 +253,16 @@ Future<T?> showCustomModalBottomSheet<T>({
 }) async {
   assert(debugCheckHasMediaQuery(context));
   assert(debugCheckHasMaterialLocalizations(context));
-  final hasMaterialLocalizations =
-      Localizations.of<MaterialLocalizations>(context, MaterialLocalizations) !=
-          null;
-  final barrierLabel = hasMaterialLocalizations
-      ? MaterialLocalizations.of(context).modalBarrierDismissLabel
-      : '';
+  final hasMaterialLocalizations = Localizations.of<MaterialLocalizations>(context, MaterialLocalizations) != null;
+  final barrierLabel = hasMaterialLocalizations ? MaterialLocalizations.of(context).modalBarrierDismissLabel : '';
 
-  final result = await Navigator.of(context, rootNavigator: useRootNavigator)
-      .push(ModalSheetRoute<T>(
+  final result = await Navigator.of(context, rootNavigator: useRootNavigator).push(ModalSheetRoute<T>(
     builder: builder,
     bounce: bounce,
     containerBuilder: containerWidget,
     secondAnimationController: secondAnimation,
     expanded: expand,
+    needCloseResistance: needCloseResistance,
     barrierLabel: barrierLabel,
     isDismissible: isDismissible,
     modalBarrierColor: barrierColor,
